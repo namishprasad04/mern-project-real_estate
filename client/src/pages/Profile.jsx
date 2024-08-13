@@ -7,6 +7,7 @@ import {
   deleteUserStart,
   deleteUserSuccess,
   deleteUserFailure,
+  signOutStart,
 } from "../redux/user/userSlice";
 
 export default function Profile() {
@@ -14,7 +15,7 @@ export default function Profile() {
   const { currentUser, loading, error } = useSelector((state) => state.user);
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePerc, setFilePerc] = useState(0);
-  const [fileUploadError, setFileUploadError] = useState(false);
+  const [fileUploadError, setFileUploadError] = useState("");
   const [formData, setFormData] = useState({});
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
@@ -30,7 +31,7 @@ export default function Profile() {
 
     try {
       setFilePerc(0);
-      setFileUploadError(false);
+      setFileUploadError("");
 
       const cloudinaryFormData = new FormData();
       cloudinaryFormData.append("file", file);
@@ -50,11 +51,10 @@ export default function Profile() {
       const data = await response.json();
 
       setFilePerc(100);
-      console.log("Upload successful:", data.secure_url);
       return data.secure_url;
     } catch (error) {
-      console.error("Upload error:", error);
-      setFileUploadError(true);
+      setFileUploadError("Error uploading image. Please try again.");
+      console.log(error)
       return null;
     }
   };
@@ -100,11 +100,12 @@ export default function Profile() {
       dispatch(updateUserFailure(error.message));
     }
   };
+
   const handleDeleteUser = async () => {
     try {
       dispatch(deleteUserStart());
       const res = await fetch(`/api/user/delete/${currentUser._id}`, {
-        method: "POST",
+        method: "DELETE",
       });
       const data = await res.json();
       if (data.success === false) {
@@ -116,6 +117,23 @@ export default function Profile() {
       dispatch(deleteUserFailure(error.message));
     }
   };
+
+  const handleSignOut = async () => {
+    try {
+      dispatch(signOutStart());
+      const res = await fetch("/api/auth/sign-out");
+      const data = await res.json();
+      if (data.success === false) {
+        dispatch(deleteUserFailure(data.message));
+        return;
+      }
+      dispatch(deleteUserSuccess(data));
+      window.location.href = "/"; // Redirect to home page instead of reloading
+    } catch (error) {
+      dispatch(deleteUserFailure(error.message));
+    }
+  };
+
   return (
     <div className="p-3 max-w-lg mx-auto">
       <h1 className="text-3xl font-semibold text-center my-7">Profile</h1>
@@ -137,16 +155,14 @@ export default function Profile() {
         </div>
         {selectedFile && <p>New file selected: {selectedFile.name}</p>}
         <p className="text-sm self-center">
-          {fileUploadError ? (
-            <span className="text-red-700">
-              Error uploading image (file size must be less than 2 MB)
-            </span>
-          ) : filePerc > 0 && filePerc < 100 ? (
+          {fileUploadError && (
+            <span className="text-red-700">{fileUploadError}</span>
+          )}
+          {filePerc > 0 && filePerc < 100 && (
             <span className="text-blue-700">{`Uploading: ${filePerc}%`}</span>
-          ) : filePerc === 100 ? (
+          )}
+          {filePerc === 100 && (
             <span className="text-green-700">Image Successfully Uploaded!</span>
-          ) : (
-            ""
           )}
         </p>
         <input
@@ -186,7 +202,9 @@ export default function Profile() {
         >
           Delete account
         </span>
-        <span className="text-red-700 cursor-pointer">Sign out</span>
+        <span onClick={handleSignOut} className="text-red-700 cursor-pointer">
+          Sign out
+        </span>
       </div>
       <p className="text-red-700 mt-5">{error ? error : ""}</p>
       <p className="text-green-700 mt-5">

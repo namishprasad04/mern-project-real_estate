@@ -1,11 +1,11 @@
 import { User } from "../models/user.model.js";
-import bcrpytjs from "bcryptjs";
+import bcryptjs  from "bcryptjs";
 import { errorHandler } from "../utils/error.js";
 import jwt from "jsonwebtoken";
 
 export const signup = async (req, res, next) => {
   const { username, email, password } = req.body;
-  const hashedPassword = bcrpytjs.hashSync(password, 10);
+  const hashedPassword = bcryptjs .hashSync(password, 10);
 
   const newUser = new User({ username, email, password: hashedPassword });
   try {
@@ -21,7 +21,7 @@ export const signin = async (req, res, next) => {
   try {
     const validUser = await User.findOne({ email });
     if (!validUser) return next(errorHandler(404, "User not found!"));
-    const validPassword = bcrpytjs.compareSync(password, validUser.password);
+    const validPassword = bcryptjs .compareSync(password, validUser.password);
     if (!validPassword) return next(errorHandler(401, "Wrong Credentials!"));
     const token = jwt.sign({ id: validUser._id }, process.env.JWT_SECRET);
     const { password: pass, ...rest } = validUser._doc;
@@ -51,7 +51,7 @@ export const google = async (req, res, next) => {
       const generatedPassword =
         Math.random().toString(36).slice(-8) +
         Math.random().toString(36).slice(-8);
-      const hashedPassword = bcrpytjs.hashSync(generatedPassword, 10);
+      const hashedPassword = bcryptjs.hashSync(generatedPassword, 10);
       const newUser = new User({
         username:
           req.body.name.split(" ").join("").toLowerCase() +
@@ -62,7 +62,7 @@ export const google = async (req, res, next) => {
       });
       await newUser.save();
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-      const { password: pass, ...rest } = user._doc;
+      const { password, ...rest } = user._doc;
       res
         .cookie("accessToken", token, {
           httpOnly: true,
@@ -74,3 +74,12 @@ export const google = async (req, res, next) => {
     next(error);
   }
 };
+
+export const signOut = (req,res,next) => {
+  try {
+    res.clearCookie('accessToken')
+    res.status(200).json({ message: 'User has been logged out!' });
+  } catch (error) {
+    next(error)
+  }
+}
