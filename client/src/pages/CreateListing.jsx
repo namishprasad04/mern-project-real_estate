@@ -25,7 +25,7 @@ export default function CreateListing() {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
- const handleImageSubmit = async (e) => {
+ const handleImageSubmit = async () => {
     if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
       setUploading(true);
       setImageUploadError(false);
@@ -40,6 +40,7 @@ export default function CreateListing() {
         setImageUploadError(false);
       } catch (err) {
         setImageUploadError('Image upload failed (2 mb max per image)');
+        console.error(err)
       } finally {
         setUploading(false);
       }
@@ -62,7 +63,7 @@ export default function CreateListing() {
       const data = await response.json();
       return data.secure_url;
     } catch (error) {
-      throw new Error('Image upload failed');
+      throw new Error('Image upload failed',error);
     }
   };
 
@@ -135,7 +136,7 @@ export default function CreateListing() {
       setLoading(false);
     }
   };
-  
+
   return (
     <main className='p-3 max-w-4xl mx-auto'>
       <h1 className='text-3xl font-semibold text-center my-7'>
