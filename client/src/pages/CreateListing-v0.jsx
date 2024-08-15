@@ -43,7 +43,6 @@ export default function CreateListing() {
         setLoading(false);
         toast.success("Files uploaded successfully!");
         setUploadedImages(urls);
-        console.log("Uploaded image URLs:", urls);
       } catch (error) {
         setLoading(false);
         toast.error("Error uploading files");
