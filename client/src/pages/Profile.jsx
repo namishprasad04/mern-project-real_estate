@@ -128,7 +128,7 @@ export default function Profile() {
         return;
       }
       dispatch(deleteUserSuccess(data));
-      window.location.href = "/"; // Redirect to home page instead of reloading
+      // window.location.href = "/"; // Redirect to home page instead of reloading
     } catch (error) {
       dispatch(deleteUserFailure(error.message));
     }
