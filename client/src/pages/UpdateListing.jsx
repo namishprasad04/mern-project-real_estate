@@ -38,7 +38,7 @@ export default function UpdateListing() {
       setFormData(data);
     };
     fetchListing();
-  }, []);
+  }, [params.id]);
 
   const handleImageSubmit = async () => {
     if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
