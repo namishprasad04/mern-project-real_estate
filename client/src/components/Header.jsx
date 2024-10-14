@@ -43,7 +43,7 @@ export default function Header() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <button>
-            <FaSearch className='text-slate-600' />
+            <FaSearch className='text-purple-600' />
           </button>
         </form>
         <ul className='flex gap-4'>
@@ -65,7 +65,7 @@ export default function Header() {
                 alt='profile'
               />
             ) : (
-              <li className=' text-slate-700 hover:underline'> Sign in</li>
+              <li className=' text-white hover:underline'> Sign in</li>
             )}
           </Link>
         </ul>
