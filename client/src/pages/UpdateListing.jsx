@@ -1,8 +1,16 @@
+/* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react";
+import {
+  getDownloadURL,
+  getStorage,
+  ref,
+  uploadBytesResumable,
+} from "firebase/storage";
+import { app } from "../utils/firebase";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 
-export default function UpdateListing() {
+export default function CreateListing() {
   const { currentUser } = useSelector((state) => state.user);
   const navigate = useNavigate();
   const params = useParams();
@@ -28,7 +36,7 @@ export default function UpdateListing() {
 
   useEffect(() => {
     const fetchListing = async () => {
-      const listingId = params.id;
+      const listingId = params.listingId;
       const res = await fetch(`/api/listing/get/${listingId}`);
       const data = await res.json();
       if (data.success === false) {
@@ -37,29 +45,32 @@ export default function UpdateListing() {
       }
       setFormData(data);
     };
-    fetchListing();
-  }, [params.id]);
 
-  const handleImageSubmit = async () => {
+    fetchListing();
+  }, []);
+
+  const handleImageSubmit = (e) => {
     if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
       setUploading(true);
       setImageUploadError(false);
-      const uploadPromises = Array.from(files).map((file) => storeImage(file));
+      const promises = [];
 
-      try {
-        const uploadedUrls = await Promise.all(uploadPromises);
-        setFormData((prevState) => ({
-          ...prevState,
-          imageUrls: [...prevState.imageUrls, ...uploadedUrls],
-        }));
-        setImageUploadError(false);
-        setFiles([]); // Clear the files state after successful upload
-      } catch (err) {
-        setImageUploadError("Image upload failed (2 mb max per image)");
-        console.error(err);
-      } finally {
-        setUploading(false);
+      for (let i = 0; i < files.length; i++) {
+        promises.push(storeImage(files[i]));
       }
+      Promise.all(promises)
+        .then((urls) => {
+          setFormData({
+            ...formData,
+            imageUrls: formData.imageUrls.concat(urls),
+          });
+          setImageUploadError(false);
+          setUploading(false);
+        })
+        .catch((err) => {
+          setImageUploadError("Image upload failed (2 mb max per image)");
+          setUploading(false);
+        });
     } else {
       setImageUploadError("You can only upload 6 images per listing");
       setUploading(false);
@@ -67,23 +78,28 @@ export default function UpdateListing() {
   };
 
   const storeImage = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "userProfile");
-
-    try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/namish/image/upload`,
-        {
-          method: "POST",
-          body: formData,
+    return new Promise((resolve, reject) => {
+      const storage = getStorage(app);
+      const fileName = new Date().getTime() + file.name;
+      const storageRef = ref(storage, fileName);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log(`Upload is ${progress}% done`);
+        },
+        (error) => {
+          reject(error);
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            resolve(downloadURL);
+          });
         }
       );
-      const data = await response.json();
-      return data.secure_url; // Make sure this is the correct property for the image URL
-    } catch (error) {
-      throw new Error("Image upload failed", error);
-    }
+    });
   };
 
   const handleRemoveImage = (index) => {
@@ -133,7 +149,7 @@ export default function UpdateListing() {
         return setError("Discount price must be lower than regular price");
       setLoading(true);
       setError(false);
-      const res = await fetch(`/api/listing/update/${params.id}`, {
+      const res = await fetch(`/api/listing/update/${params.listingId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -154,7 +170,6 @@ export default function UpdateListing() {
       setLoading(false);
     }
   };
-
   return (
     <main className="p-3 max-w-4xl mx-auto">
       <h1 className="text-3xl font-semibold text-center my-7">
@@ -302,7 +317,6 @@ export default function UpdateListing() {
                 />
                 <div className="flex flex-col items-center">
                   <p>Discounted price</p>
-
                   {formData.type === "rent" && (
                     <span className="text-xs">($ / month)</span>
                   )}

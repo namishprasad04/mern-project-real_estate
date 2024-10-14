@@ -1,6 +1,15 @@
+/* eslint-disable no-unused-vars */
 import { useState } from "react";
+import {
+  getDownloadURL,
+  getStorage,
+  ref,
+  uploadBytesResumable,
+} from "firebase/storage";
+import { app } from "../utils/firebase";
 import { useSelector } from "react-redux";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+import axios from "axios"
 
 export default function CreateListing() {
   const { currentUser } = useSelector((state) => state.user);
@@ -25,49 +34,47 @@ export default function CreateListing() {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleImageSubmit = async () => {
+  const handleImageSubmit = async (e) => {
+    e.preventDefault();
+    setUploading(true);
+    setImageUploadError(false);
+
     if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
-      setUploading(true);
-      setImageUploadError(false);
-      const uploadPromises = Array.from(files).map((file) => storeImage(file));
+      const uploadPromises = Array.from(files).map(uploadImage);
 
       try {
-        const uploadedUrls = await Promise.all(uploadPromises);
-        setFormData((prevState) => ({
-          ...prevState,
-          imageUrls: [...prevState.imageUrls, ...uploadedUrls],
-        }));
+        const uploadedImages = await Promise.all(uploadPromises);
+        setFormData({
+          ...formData,
+          imageUrls: [...formData.imageUrls, ...uploadedImages],
+        });
         setImageUploadError(false);
-        setFiles([]); // Clear the files state after successful upload
-      } catch (err) {
-        setImageUploadError("Image upload failed (2 mb max per image)");
-        console.error(err);
+      } catch (error) {
+        console.error("Upload error:", error);
+        setImageUploadError("Image upload failed. Please try again.");
       } finally {
         setUploading(false);
       }
     } else {
-      setImageUploadError("You can only upload 6 images per listing");
+      setImageUploadError("You can only upload up to 6 images per listing");
       setUploading(false);
     }
   };
 
-  const storeImage = async (file) => {
+  const uploadImage = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "userProfile");
+    formData.append("upload_preset", "userProfile"); // Replace with your upload preset
 
     try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/namish/image/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/namish/image/upload`, // Replace YOUR_CLOUD_NAME
+        formData
       );
-      const data = await response.json();
-      return data.secure_url; // Make sure this is the correct property for the image URL
+      return response.data.secure_url;
     } catch (error) {
-      throw new Error("Image upload failed", error);
+      console.error("Cloudinary upload error:", error);
+      throw new Error("Image upload to Cloudinary failed");
     }
   };
 
@@ -139,7 +146,6 @@ export default function CreateListing() {
       setLoading(false);
     }
   };
-
   return (
     <main className="p-3 max-w-4xl mx-auto">
       <h1 className="text-3xl font-semibold text-center my-7">
@@ -269,7 +275,7 @@ export default function CreateListing() {
               <div className="flex flex-col items-center">
                 <p>Regular price</p>
                 {formData.type === "rent" && (
-                  <span className="text-xs">($ / month)</span>
+                  <span className="text-xs">(₹ / month)</span>
                 )}
               </div>
             </div>
@@ -289,7 +295,7 @@ export default function CreateListing() {
                   <p>Discounted price</p>
 
                   {formData.type === "rent" && (
-                    <span className="text-xs">($ / month)</span>
+                    <span className="text-xs">(₹ / month)</span>
                   )}
                 </div>
               </div>
